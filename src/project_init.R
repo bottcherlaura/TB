@@ -17,4 +17,12 @@ renv::init()
 # When adding packages you already have been using in other project to this project use renv::hydrate()
 renv::hydrate("knitr")
 renv::hydrate("tidyverse")
+renv::hydrate("writexl")
+renv::install("writexl")
 
+sessionInfo()
+
+renv::status()
+# Read the lock file as text
+lock <- jsonlite::fromJSON("renv.lock")
+names(lock$Packages)  # Lists all package names
