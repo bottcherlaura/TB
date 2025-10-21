@@ -1,0 +1,127 @@
+---
+title: "Olink data fix"
+author: "Laura"
+date: '`r format(Sys.Date(), "2025-10-21")`'
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+    highlight: pygments
+abstract: Short project description.
+knit: (function(inputFile, encoding) {
+          rmarkdown::render(inputFile,
+                            encoding = encoding, 
+                            output_file = paste0(
+                              xfun::sans_ext(inputFile), '_', Sys.Date(), '.html'),
+                                output_dir = "../results/lab_book/")})
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(echo = TRUE, root.dir = getwd(), fig.width = 6, fig.height = 5, warning = FALSE, message = FALSE)
+
+result.dir <- paste0("results/",Sys.Date(),"/")
+
+## creates result.dir with date in if not existent
+ifelse(isFALSE(dir.exists(paste0("../",result.dir))), dir.create(paste0("../",result.dir),recursive = TRUE),"Result directory for today exists already!")
+options(stringsAsFactors = FALSE) 
+```
+
+# R markdown usage 
+
+# Heading 1
+
+## Heading 2
+
+Some text
+
+```{r message = FALSE}
+#Here you can put R code
+```
+
+```{r, message = FALSE, Fig 1, fig.align='center', fig.cap='Figure 1: Caption', out.width=768, fig.pos='H'}
+#This block contains some useful options for inserting figures
+```
+
+
+## 1. Needed libraries
+```{r message=FALSE}
+library(tidyverse)
+library(readxl)
+library(writexl)
+```
+
+## 2. olink discovery file
+
+### 2.1 Import your data into R
+```{r message=FALSE}
+## to import excel files
+Olink <- load("AllDatasets-Samples.RData")
+
+discovery <-  samples_first
+rm(samples_first)
+
+```
+
+### 2.2 Data wrangling
+```{r message=FALSE}
+
+discovery_SE <- discovery %>% 
+  filter(Origin == 'Sweden')
+```
+
+```{r}
+discovery_SE1 <- discovery_SE %>%
+  mutate(
+    SampleID = gsub("AS", "TB", SampleID),
+    SampleID = gsub("HS", "TB", SampleID),
+    SampleID = gsub("LAM", "TB", SampleID),
+    SampleID = gsub("LS", "TB", SampleID)
+  )
+
+
+```
+
+```{r}
+write_xlsx(discovery_SE1, "/Users/laubot/R studio/TB/results/2025-10-21/discovery_SE1.xlsx")
+
+```
+
+## 3. olink validation 
+
+### 3.1
+```{r message=FALSE}
+## to import excel files
+Olink <- load("AllDatasets-Samples.RData")
+```
+
+
+```{r message=FALSE}
+validation1 <-  samples_second
+rm(samples_second)
+
+
+validation1 <- validation1 %>% 
+  filter(`Sample origin` == 'Sweden')
+```
+
+```{r message=FALSE}
+validation2 <-  samples_third
+rm(samples_third)
+
+```
+
+```{r}
+write_xlsx(validation1, "/Users/laubot/R studio/TB/results/2025-10-21/validation1.xlsx")
+write_xlsx(validation2, "/Users/laubot/R studio/TB/results/2025-10-21/validation2.xlsx")
+```
+
+## 6. SessionInfo
+```{r}
+## Take environment snapshot 
+#renv::snapshot()
+
+sessionInfo()
+```
+
+
