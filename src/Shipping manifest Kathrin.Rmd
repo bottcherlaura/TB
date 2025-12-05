@@ -94,7 +94,12 @@ Zim3 <- read_csv2(
 
 ```{r}
 
-shipping_id_long <- shipping_id %>%
+shipping_id_3 <- read_csv2(
+  "/Users/laubot/R studio/TB/data/Shipping manifest ERASE TB/ID_list_3.csv",
+  locale = locale(encoding = "UTF-8") # needed when letters with weird caracters like ä, å...
+) %>% janitor::clean_names()
+
+shipping_id_long <-shipping_id_3 %>%
   pivot_longer(
     cols = starts_with("id_visit_"),
     names_to = "visit",
@@ -180,6 +185,7 @@ shipping_id_tan_moz <- shipping_id_tan %>%
   ) %>% 
   distinct(id_visit_clean, .keep_all = TRUE)
 
+
 ```
 
 
@@ -195,8 +201,11 @@ Zim <- Zim %>%
 ```{r message=FALSE}
 
 shipping_id_zim <- shipping_id_tan_moz %>%
+  mutate(pers_id = as.character(pers_id)) %>%   # convert BEFORE joining
   left_join(
-    Zim %>% select(sampleid_plasma, person_id),
+    Zim %>% 
+      mutate(person_id = as.character(person_id)) %>% 
+      select(sampleid_plasma, person_id),
     by = c("pers_id" = "person_id")
   ) %>%
   distinct(id_visit_clean, .keep_all = TRUE) %>%
@@ -204,6 +213,7 @@ shipping_id_zim <- shipping_id_tan_moz %>%
     # Replace last 3 characters with 511
     sampleid_plasma = str_replace(sampleid_plasma, ".{3}$", "511")
   )
+
 ```
 
 ```{r, combine boxes}
@@ -259,7 +269,7 @@ shipping_id_final <- shipping_id_tan_moz_zim %>%
 ```
 ### 7.2 data export
 ```{r}
-write_xlsx(shipping_id_final, "/Users/laubot/Desktop/Shipping.manifest.xlsx")
+write_xlsx(shipping_id_final, "/Users/laubot/Desktop/Shipping.manifest-extra.xlsx")
 
 ```
 
@@ -271,5 +281,163 @@ write_xlsx(shipping_id_final, "/Users/laubot/Desktop/Shipping.manifest.xlsx")
 
 sessionInfo()
 ```
+
+# Shipping 2
+```{r}
+# This list inclueds 
+# control
+#Progression/TB
+#latent TB
+#persistant negative
+#persistant positive
+#negative to positive (converters)
+```
+
+## 1. docunents 
+```{r}
+shipping_id2 <- read_csv2(
+  "/Users/laubot/R studio/TB/data/Shipping manifest ERASE TB/sample id2.csv",
+  locale = locale(encoding = "UTF-8") # needed when letters with weird caracters like ä, å...
+) %>% janitor::clean_names()
+
+```
+
+## 2. shipping ID
+```{r}
+
+shipping_id2_long <- shipping_id2 %>%
+  pivot_longer(
+    cols = starts_with("id_visit_"),
+    names_to = "visit",
+    values_to = "id_visit",
+    values_drop_na = TRUE
+  )
+
+```
+
+
+```{r message=FALSE}
+
+shipping_id2_clean <- shipping_id2_long %>%
+  filter(
+    id_visit != 0 & !is.na(id_visit),
+    pers_id != 0 & !is.na(pers_id)
+  )
+
+
+```
+
+```{r}
+
+shipping_id2_clean <- shipping_id2_clean %>%
+  mutate(id_visit_clean = str_replace_all(id_visit, "_", ""))
+
+
+```
+
+```{r}
+shipping_id2_clean <- shipping_id2_clean%>%
+  distinct(id_visit_clean, .keep_all = TRUE)
+```
+
+## 3. Tanzania
+```{r message=FALSE}
+
+Tan_clean <- Tan %>%
+  mutate(participant_id_clean = str_replace_all(participant_id, "-", ""))
+
+
+```
+
+```{r}
+
+
+shipping_id2_tan <- shipping_id2_clean %>%
+  left_join(
+    Tan_clean %>% select(participant_id_clean, sub_sector_1, sub_sector_2, sub_sector_3),
+    by = c("id_visit_clean" = "participant_id_clean")
+  ) %>% 
+  distinct(id_visit_clean, .keep_all = TRUE)
+
+colnames(shipping_id2_tan)[colnames(shipping_id2_tan) == "sub_sector_1"] <- "position"
+colnames(shipping_id2_tan)[colnames(shipping_id2_tan) == "sub_sector_2"] <- "rack"
+colnames(shipping_id2_tan)[colnames(shipping_id2_tan) == "sub_sector_3"] <- "box_name"
+
+```
+
+## 4. Mozambique
+```{r message=FALSE}
+Moz_clean <- Moz %>%
+  mutate(participant_id_clean = str_replace_all(participant_id, "-", ""))
+
+
+```
+
+
+```{r, filter for the word "plasma" in column}
+
+Moz_clean <- Moz_clean %>%
+  filter(str_starts(position_14, "PLASMA"))
+
+```
+
+```{r}
+
+
+shipping_id2_tan_moz <- shipping_id2_tan %>%
+  left_join(
+    Moz_clean %>% select(participant_id_clean, position_12, position_13, position_14),
+    by = c("id_visit_clean" = "participant_id_clean")
+  ) %>% 
+  distinct(id_visit_clean, .keep_all = TRUE)
+
+```
+
+
+
+```{r}
+
+shipping_id2_tan_moz_zim <- shipping_id2_zim %>%
+  mutate(sampleid_plasma = str_trim(as.character(sampleid_plasma))) %>% #remove any leading or trailing spaces in  ID columns and formats it into character
+  # perform join only for non-NA sampleid_plasma
+  left_join(
+    Zim_combined %>%
+      mutate(sample_id_number = str_trim(as.character(sample_id_number))) %>% #remove any leading or trailing spaces in  ID columns and formats it into character
+      select(box_number, cell, sample_id_number) %>%
+      filter(!is.na(sample_id_number)),  # ignore NA in the join column
+    by = c("sampleid_plasma" = "sample_id_number")
+  )
+
+```
+
+## 7. 
+### 7.1 combine all
+
+```{r}
+library(janitor)
+
+shipping_id2_tan_moz_zim <- shipping_id2_tan_moz_zim %>% clean_names()
+
+colnames(shipping_id2_tan_moz_zim)
+
+colnames(shipping_id2_tan_moz_zim) |> dput()
+
+```
+```{r}
+shipping_id2_final <- shipping_id2_tan_moz_zim %>%
+  mutate(
+    position = coalesce(position, position_12),          # combine position columns
+    rack     = coalesce(rack, position_13),              # combine rack with position_13
+    box_name = coalesce(box_name, position_14, box_number)  # combine box_name, position_14, box_number
+  ) %>%
+  select(-position_12, -position_13, -position_14, -box_number)  # remove old columns
+
+```
+### 7.2 data export
+```{r}
+write_xlsx(shipping_id2_final, "/Users/laubot/Desktop/Shipping.manifest.3.xlsx")
+
+```
+
 
 
